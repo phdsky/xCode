@@ -1,0 +1,136 @@
+import edu.princeton.cs.algs4.WeightedQuickUnionUF;
+
+public class Percolation {
+    private static final int OPENED = 1;
+    private static final int BOTTOMED = 2;
+
+    private final int size;
+    private final int top;
+
+    private final WeightedQuickUnionUF uf;
+
+    private int count;
+    private byte[] ufBlocked;
+
+    // creates n-by-n grid, with all sites initially blocked
+    public Percolation(int n) {
+        if (n <= 0) {
+            throw new IllegalArgumentException("Input error: n <= 0");
+        }
+
+        size = n;
+        int sum = n * n;
+        uf = new WeightedQuickUnionUF(sum + 2);
+
+        top = sum;
+
+        ufBlocked = new byte[sum + 2];
+        ufBlocked[top] = OPENED;
+
+        count = 0;
+    }
+
+    private int index(int row, int col) {
+        checkRange(row, col);
+        return (row - 1) * size + col - 1;
+    }
+
+    private void checkRange(int row, int col) {
+        if (row < 1 || row > size || col < 1 || col > size) {
+            throw new IllegalArgumentException("row or col out of range");
+        }
+    }
+
+    private boolean checkConnectBottom(int id1, int id2) {
+        return ufBlocked[uf.find(id1)] == BOTTOMED || ufBlocked[uf.find(id2)] == BOTTOMED;
+    }
+
+    // opens the site (row, col) if it is not open already
+    public void open(int row, int col) {
+        if (isOpen(row, col)) {
+            return;
+        }
+
+        count += 1;
+        ufBlocked[index(row, col)] = OPENED;
+
+        if (row == size) {
+            ufBlocked[index(row, col)] = BOTTOMED;
+        }
+
+        boolean checkStatus;
+        // up
+        if (row == 1) {
+            checkStatus = checkConnectBottom(top, index(row, col));
+            uf.union(top, index(row, col));
+            if (checkStatus) {
+                ufBlocked[uf.find(index(row, col))] = BOTTOMED;
+            }
+        }
+        else if (row > 1 && isOpen(row - 1, col)) {
+            checkStatus = checkConnectBottom(index(row - 1, col), index(row, col));
+            uf.union(index(row - 1, col), index(row, col));
+            if (checkStatus) {
+                ufBlocked[uf.find(index(row, col))] = BOTTOMED;
+            }
+        }
+
+        // down
+        if (row < size && isOpen(row + 1, col)) {
+            checkStatus = checkConnectBottom(index(row + 1, col), index(row, col));
+            uf.union(index(row + 1, col), index(row, col));
+            if (checkStatus) {
+                ufBlocked[uf.find(index(row, col))] = BOTTOMED;
+            }
+        }
+
+        // left
+        if (col - 1 >= 1 && isOpen(row, col - 1)) {
+            checkStatus = checkConnectBottom(index(row, col - 1), index(row, col));
+            uf.union(index(row, col - 1), index(row, col));
+            if (checkStatus) {
+                ufBlocked[uf.find(index(row, col))] = BOTTOMED;
+            }
+        }
+
+        // right
+        if (col + 1 <= size && isOpen(row, col + 1)) {
+            checkStatus = checkConnectBottom(index(row, col + 1), index(row, col));
+            uf.union(index(row, col + 1), index(row, col));
+            if (checkStatus) {
+                ufBlocked[uf.find(index(row, col))] = BOTTOMED;
+            }
+        }
+    }
+
+    // is the site (row, col) open?
+    public boolean isOpen(int row, int col) {
+        checkRange(row, col);
+
+        return ufBlocked[index(row, col)] > 0;
+    }
+
+    // is the site (row, col) full?
+    public boolean isFull(int row, int col) {
+        if (!isOpen(row, col)) {
+            return false;
+        }
+
+        return uf.find(index(row, col)) == uf.find(top);
+    }
+
+    // returns the number of open sites
+    public int numberOfOpenSites() {
+        return count;
+    }
+
+    // does the system percolate?
+    public boolean percolates() {
+        return ufBlocked[uf.find(top)] == BOTTOMED;
+    }
+
+    // test client (optional)
+    public static void main(String[] args) {
+        System.out.println("Test client (optional)");
+    }
+}
