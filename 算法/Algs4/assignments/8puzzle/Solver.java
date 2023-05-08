@@ -1,26 +1,113 @@
+import java.util.Stack;
+
 import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.MinPQ;
 import edu.princeton.cs.algs4.StdOut;
 
 public class Solver {
+    private Node currNode;
+    private final boolean solvable;
+
+    private class Node implements Comparable<Node> {
+        private final int currMove;
+        private final int priority;
+        private final Node preNode;
+        private final Board board;
+
+        public Node(Board initial) {
+            this.currMove = 0;
+            this.board = initial;
+            this.preNode = null;
+            this.priority = board.manhattan();
+        }
+
+        public Node(Board currBoard, Node preNode) {
+            this.currMove = preNode.currMove + 1;
+            this.board = currBoard;
+            this.preNode = preNode;
+            this.priority = this.currMove + this.board.manhattan();
+        }
+
+        @Override
+        public int compareTo(Node that) {
+            if (this.priority > that.priority) {
+                return 1;
+            } else if (this.priority == that.priority) {
+                return 0;
+            } else {
+                return -1;
+            }
+        }
+    }
 
     // find a solution to the initial board (using the A* algorithm)
     public Solver(Board initial) {
+        if (null == initial) {
+            throw new IllegalArgumentException("This is a empty initail tiles!");
+        }
 
+        MinPQ<Node> headPQ = new MinPQ<Solver.Node>();
+        headPQ.insert(new Node(initial));
+        MinPQ<Node> tailPQ = new MinPQ<Solver.Node>();
+        tailPQ.insert(new Node(initial.twin()));
+
+        while (true) {
+            currNode = aStarSearch(headPQ);
+            if (currNode.board.isGoal()) {
+                solvable = true;
+                break;
+            }
+            if (aStarSearch(tailPQ).board.isGoal()) {
+                solvable = false;
+                break;
+            }
+        }
+    }
+
+    // add priority-node's neighbors to MinPQ but not it's parents node;
+    private Node aStarSearch(MinPQ<Node> pq) {
+        Node priorityNode = pq.delMin();
+        for (Board neighbor : priorityNode.board.neighbors()) {
+            if (priorityNode.preNode == null || !neighbor.equals(priorityNode.preNode.board)) {
+                pq.insert(new Node(neighbor, priorityNode));
+            }
+        }
+
+        return priorityNode;
     }
 
     // is the initial board solvable? (see below)
     public boolean isSolvable() {
-        return false;
+        return solvable;
     }
 
     // min number of moves to solve initial board; -1 if unsolvable
     public int moves() {
-        return -1;
+        if (!isSolvable()) {
+            return -1;
+        } else {
+            return currNode.currMove;
+        }
     }
 
     // sequence of boards in a shortest solution; null if unsolvable
     public Iterable<Board> solution() {
-        return null;
+        if (isSolvable()) {
+            Stack<Board> invSolution = new Stack<Board>();
+            Node node = currNode;
+            while (node != null) {
+                invSolution.push(node.board);
+                node = node.preNode;
+            }
+            Stack<Board> solution = new Stack<Board>();
+            while (!invSolution.isEmpty()) {
+                solution.push(invSolution.pop());
+            }
+
+            return solution;
+        } else {
+            return null;
+        }
     }
 
     // test client (see below) 
